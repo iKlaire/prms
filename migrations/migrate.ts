@@ -7,19 +7,33 @@ const migrate = async (): Promise<void> => {
     await client.query("BEGIN");
 
     await client.query(`
-      CREATE TYPE membership_level AS ENUM ('SILVER', 'GOLD', 'PLATINUM');
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
     `);
 
     await client.query(`
-      CREATE TYPE resource_type AS ENUM (
-        'FOOD_STATION',
-        'SLEEPING_POD',
-        'BASIC_HYGIENE',
-        'PRIVATE_CABIN',
-        'ADVANCED_MEDICAL_BAY',
-        'LUXURY_O2_POD',
-        'VIP_REC_DECK'
-      );
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membership_level') THEN
+          CREATE TYPE membership_level AS ENUM ('SILVER', 'GOLD', 'PLATINUM');
+        END IF;
+      END $$;
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'resource_type') THEN
+          CREATE TYPE resource_type AS ENUM (
+            'FOOD_STATION',
+            'SLEEPING_POD',
+            'BASIC_HYGIENE',
+            'PRIVATE_CABIN',
+            'ADVANCED_MEDICAL_BAY',
+            'LUXURY_O2_POD',
+            'VIP_REC_DECK'
+          );
+        END IF;
+      END $$;
     `);
 
     await client.query(`
@@ -63,11 +77,17 @@ const migrate = async (): Promise<void> => {
 
     // Seed 3 crew leads — spec says exactly 3, hardcoded by design
     await client.query(`
-      INSERT INTO crew_leads (name) VALUES
-        ('Commander Reyes'),
-        ('Commander Singh'),
-        ('Commander Park')
-      ON CONFLICT DO NOTHING;
+      INSERT INTO crew_leads (name)
+      SELECT name
+      FROM (
+        VALUES
+          ('Commander Reyes'),
+          ('Commander Singh'),
+          ('Commander Park')
+      ) AS seeded(name)
+      WHERE NOT EXISTS (
+        SELECT 1 FROM crew_leads WHERE crew_leads.name = seeded.name
+      );
     `);
 
     await client.query("COMMIT");
