@@ -295,24 +295,24 @@ prms/
 │   │   ├── resource.ts               ✅ done — Resource, ResourceType, DTOs
 │   │   └── usageLog.ts               ✅ done — UsageLog, AggregatedUsage, etc.
 │   ├── repositories/
-│   │   ├── passengerRepository.ts    ⬜ build
-│   │   ├── resourceRepository.ts     ⬜ build
-│   │   └── usageLogRepository.ts     ⬜ build
+│   │   ├── passengerRepository.ts    ✅ done
+│   │   ├── resourceRepository.ts     ✅ done
+│   │   └── usageLogRepository.ts     ✅ done
 │   ├── services/
-│   │   ├── passengerService.ts       ⬜ build
-│   │   ├── resourceService.ts        ⬜ build
-│   │   └── usageService.ts           ⬜ build — tier inheritance logic lives here
+│   │   ├── passengerService.ts       ✅ done
+│   │   ├── resourceService.ts        ✅ done
+│   │   └── usageService.ts           ✅ done — tier inheritance logic lives here
 │   ├── middleware/
-│   │   └── auth.ts                   ⬜ build — crewLeadOnly + passengerAuth
+│   │   └── auth.ts                   ✅ done — crewLeadOnly + passengerAuth
 │   ├── routes/
-│   │   ├── crewRoutes.ts             ⬜ build
-│   │   └── passengerRoutes.ts        ⬜ build
-│   └── app.ts                        ✅ done — mount routes when built
+│   │   ├── crewRoutes.ts             ✅ done
+│   │   └── passengerRoutes.ts        ✅ done
+│   └── app.ts                        ✅ done — routes mounted
 ├── tests/
-│   ├── usageService.test.ts          ⬜ build — highest priority
-│   ├── passengerService.test.ts      ⬜ build
-│   ├── resourceService.test.ts       ⬜ build
-│   └── routes.test.ts                ⬜ build — integration via supertest
+│   ├── usageService.test.ts          ✅ done
+│   ├── passengerService.test.ts      ✅ done
+│   ├── resourceService.test.ts       ✅ done
+│   └── routes.test.ts                ✅ done — integration via supertest
 ├── migrations/
 │   └── migrate.ts                    ✅ done — full schema + 3 crew leads seeded
 ├── PLAN.md                           ✅ this file
@@ -320,6 +320,7 @@ prms/
 ├── .env.example                      ✅ done
 ├── jest.config.ts                    ✅ done
 ├── tsconfig.json                     ✅ done
+├── README.md                         ✅ done
 └── package.json                      ✅ done
 ```
 
