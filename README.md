@@ -39,13 +39,21 @@ The backend uses lightweight header-based identity for assessment scope:
 - Crew routes require `x-crew-lead-id`
 - Passenger routes require `x-passenger-id`
 
-Login endpoints accept `{ "name": "...", "password": "..." }`. Because the schema intentionally has no password table, the password only needs to be present; the account is resolved by name.
+Login endpoints accept `{ "name": "...", "password": "..." }`. Passwords are stored as bcrypt hashes.
 
 Seeded crew leads:
 
-- Commander Reyes
-- Commander Singh
-- Commander Park
+- Ali
+- Muthu
+- Hock
+
+All seeded crew leads use this initial password:
+
+```text
+password123
+```
+
+Passenger names are also login names, so active passenger names are unique case-insensitively. This means `Ada`, `ada`, and `ADA` cannot coexist while both accounts are active. A decommissioned passenger name may be reused for a new passenger.
 
 ## API
 
@@ -59,13 +67,17 @@ Core routes are available at both root paths and `/api` paths for the Vite clien
 - `DELETE /crew/passengers/:id`
 - `POST /crew/resources`
 - `GET /crew/resources`
+- `PATCH /crew/resources/:id`
 - `DELETE /crew/resources/:id`
+- `PATCH /crew/resources/:id/reactivate`
 - `GET /crew/reports/usage`
 - `GET /crew/reports/by-level`
 - `GET /crew/reports/top-resources`
 - `GET /passengers/resources`
 - `POST /passengers/resources/:id/use`
 - `GET /passengers/usage`
+
+Deleting a passenger is a soft delete: `DELETE /crew/passengers/:id` decommissions the account and preserves usage logs. Decommissioned passengers cannot log in and passenger-authenticated routes reject them with `403 { "error": "Account decommissioned" }`.
 
 ## Architecture
 
@@ -88,6 +100,20 @@ Higher membership tiers inherit lower-tier resources:
 - `PLATINUM`: silver, gold, and platinum resources
 
 The access map lives in `src/services/usageService.ts` and is reused by resource filtering.
+
+## Resources
+
+Resources use free-text names rather than a fixed type enum. The migration seeds these spec resources:
+
+- Food Station
+- Sleeping Pod
+- Basic Hygiene
+- Private Cabin
+- Advanced Medical Bay
+- Luxury O2 Pod
+- VIP Rec Deck
+
+Crew leads can add, rename, decommission, and reactivate resources without schema changes.
 
 ## Client
 
