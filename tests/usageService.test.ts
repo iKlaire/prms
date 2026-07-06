@@ -1,5 +1,4 @@
 import { MembershipLevel } from "../src/domain/passenger";
-import { ResourceType } from "../src/domain/resource";
 import {
   UsageLogStore,
   UsagePassengerStore,
@@ -12,7 +11,6 @@ const now = new Date("2026-01-01T00:00:00Z");
 const createResource = (minimumLevel: MembershipLevel, isActive = true) => ({
   id: "resource-1",
   name: "Hydration Station",
-  type: ResourceType.FOOD_STATION,
   minimumLevel,
   isActive,
   createdAt: now,

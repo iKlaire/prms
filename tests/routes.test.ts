@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import type { RequestHandler } from "express";
 import { MembershipLevel, Passenger } from "../src/domain/passenger";
-import { Resource, ResourceType } from "../src/domain/resource";
+import { Resource } from "../src/domain/resource";
 import { createCrewRoutes } from "../src/routes/crewRoutes";
 import { createPassengerRoutes } from "../src/routes/passengerRoutes";
 import {
@@ -26,6 +26,7 @@ const passenger: Passenger = {
   id: "passenger-1",
   name: "Mae Jemison",
   membershipLevel: MembershipLevel.GOLD,
+  isActive: true,
   createdAt: now,
   updatedAt: now,
 };
@@ -33,7 +34,6 @@ const passenger: Passenger = {
 const resource: Resource = {
   id: "resource-1",
   name: "Sleep Pod",
-  type: ResourceType.SLEEPING_POD,
   minimumLevel: MembershipLevel.SILVER,
   isActive: true,
   createdAt: now,
@@ -63,15 +63,19 @@ describe("routes", () => {
       create: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
+      findActiveByName: jest.fn(),
       update: jest.fn(),
-      delete: jest.fn(),
+      decommission: jest.fn(),
     };
     resourceRepo = {
       create: jest.fn(),
       findAll: jest.fn(),
-      findActiveByMinimumLevels: jest.fn(),
-      decommission: jest.fn(),
       findById: jest.fn(),
+      findByName: jest.fn(),
+      findActiveByMinimumLevels: jest.fn(),
+      update: jest.fn(),
+      decommission: jest.fn(),
+      reactivate: jest.fn(),
     };
     usageLogRepo = {
       create: jest.fn(),
@@ -110,11 +114,16 @@ describe("routes", () => {
   });
 
   it("creates a passenger through the crew route", async () => {
+    passengerRepo.findActiveByName.mockResolvedValue(null);
     passengerRepo.create.mockResolvedValue(passenger);
 
     const response = await request(app)
       .post("/crew/passengers")
-      .send({ name: passenger.name, membershipLevel: passenger.membershipLevel })
+      .send({
+        name: passenger.name,
+        password: "password123",
+        membershipLevel: passenger.membershipLevel,
+      })
       .expect(201);
 
     expect(response.body).toMatchObject({
