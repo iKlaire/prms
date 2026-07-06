@@ -10,6 +10,13 @@ export const sendError = (res: Response, err: unknown): Response => {
       return res.status(403).json({ error: err.message });
     }
 
+    if (
+      err.message.includes("already") ||
+      err.message.includes("exists")
+    ) {
+      return res.status(409).json({ error: err.message });
+    }
+
     if (err.message.includes("decommissioned")) {
       return res.status(410).json({ error: err.message });
     }

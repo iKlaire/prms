@@ -4,13 +4,12 @@ import type { MembershipLevel } from "../domain/passenger";
 import {
   CreateResourceDTO,
   Resource,
-  ResourceType,
+  UpdateResourceDTO,
 } from "../domain/resource";
 
 interface ResourceRow {
   id: string;
   name: string;
-  type: ResourceType;
   minimum_level: MembershipLevel;
   is_active: boolean;
   created_at: Date;
@@ -23,11 +22,11 @@ export class ResourceRepository {
   async create(dto: CreateResourceDTO): Promise<Resource> {
     const result = await this.db.query<ResourceRow>(
       `
-        INSERT INTO resources (name, type, minimum_level)
-        VALUES ($1, $2, $3)
-        RETURNING id, name, type, minimum_level, is_active, created_at, updated_at
+        INSERT INTO resources (name, minimum_level)
+        VALUES ($1, $2)
+        RETURNING id, name, minimum_level, is_active, created_at, updated_at
       `,
-      [dto.name, dto.type, dto.minimumLevel],
+      [dto.name, dto.minimumLevel],
     );
 
     return this.toDomain(result.rows[0]);
@@ -36,7 +35,7 @@ export class ResourceRepository {
   async findAll(): Promise<Resource[]> {
     const result = await this.db.query<ResourceRow>(
       `
-        SELECT id, name, type, minimum_level, is_active, created_at, updated_at
+        SELECT id, name, minimum_level, is_active, created_at, updated_at
         FROM resources
         ORDER BY created_at ASC
       `,
@@ -48,7 +47,7 @@ export class ResourceRepository {
   async findById(id: string): Promise<Resource | null> {
     const result = await this.db.query<ResourceRow>(
       `
-        SELECT id, name, type, minimum_level, is_active, created_at, updated_at
+        SELECT id, name, minimum_level, is_active, created_at, updated_at
         FROM resources
         WHERE id = $1
       `,
@@ -63,7 +62,7 @@ export class ResourceRepository {
   ): Promise<Resource[]> {
     const result = await this.db.query<ResourceRow>(
       `
-        SELECT id, name, type, minimum_level, is_active, created_at, updated_at
+        SELECT id, name, minimum_level, is_active, created_at, updated_at
         FROM resources
         WHERE is_active = TRUE
           AND minimum_level = ANY($1::membership_level[])
@@ -75,13 +74,57 @@ export class ResourceRepository {
     return result.rows.map((row) => this.toDomain(row));
   }
 
+  async findByName(name: string): Promise<Resource | null> {
+    const result = await this.db.query<ResourceRow>(
+      `
+        SELECT id, name, minimum_level, is_active, created_at, updated_at
+        FROM resources
+        WHERE LOWER(name) = LOWER($1)
+      `,
+      [name],
+    );
+
+    return result.rows[0] ? this.toDomain(result.rows[0]) : null;
+  }
+
+  async update(id: string, dto: UpdateResourceDTO): Promise<Resource | null> {
+    const result = await this.db.query<ResourceRow>(
+      `
+        UPDATE resources
+        SET
+          name = COALESCE($2, name),
+          minimum_level = COALESCE($3, minimum_level),
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, name, minimum_level, is_active, created_at, updated_at
+      `,
+      [id, dto.name ?? null, dto.minimumLevel ?? null],
+    );
+
+    return result.rows[0] ? this.toDomain(result.rows[0]) : null;
+  }
+
   async decommission(id: string): Promise<Resource | null> {
     const result = await this.db.query<ResourceRow>(
       `
         UPDATE resources
         SET is_active = FALSE, updated_at = NOW()
         WHERE id = $1
-        RETURNING id, name, type, minimum_level, is_active, created_at, updated_at
+        RETURNING id, name, minimum_level, is_active, created_at, updated_at
+      `,
+      [id],
+    );
+
+    return result.rows[0] ? this.toDomain(result.rows[0]) : null;
+  }
+
+  async reactivate(id: string): Promise<Resource | null> {
+    const result = await this.db.query<ResourceRow>(
+      `
+        UPDATE resources
+        SET is_active = TRUE, updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, name, minimum_level, is_active, created_at, updated_at
       `,
       [id],
     );
@@ -93,7 +136,6 @@ export class ResourceRepository {
     return {
       id: row.id,
       name: row.name,
-      type: row.type,
       minimumLevel: row.minimum_level,
       isActive: row.is_active,
       createdAt: row.created_at,

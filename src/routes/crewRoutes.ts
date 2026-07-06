@@ -1,7 +1,6 @@
 import type { RequestHandler } from "express";
 import { Router } from "express";
 import { MembershipLevel } from "../domain/passenger";
-import type { ResourceType } from "../domain/resource";
 import { crewLeadOnly } from "../middleware/auth";
 import { PassengerRepository } from "../repositories/passengerRepository";
 import { ResourceRepository } from "../repositories/resourceRepository";
@@ -13,6 +12,7 @@ import { sendError } from "./http";
 
 interface CreatePassengerBody {
   name?: string;
+  password?: string;
   membershipLevel?: MembershipLevel;
 }
 
@@ -23,7 +23,11 @@ interface UpdatePassengerBody {
 
 interface CreateResourceBody {
   name?: string;
-  type?: ResourceType;
+  minimumLevel?: MembershipLevel;
+}
+
+interface UpdateResourceBody {
+  name?: string;
   minimumLevel?: MembershipLevel;
 }
 
@@ -43,6 +47,7 @@ export const createCrewRoutes = (
     try {
       const passenger = await passengerService.create({
         name: body.name ?? "",
+        password: body.password ?? "",
         membershipLevel: body.membershipLevel as MembershipLevel,
       });
       res.status(201).json(passenger);
@@ -72,8 +77,8 @@ export const createCrewRoutes = (
 
   router.delete("/passengers/:id", async (req, res) => {
     try {
-      await passengerService.delete(req.params.id);
-      res.status(204).send();
+      await passengerService.decommissionPassenger(req.params.id);
+      res.status(200).json({ message: "Passenger decommissioned" });
     } catch (err) {
       sendError(res, err);
     }
@@ -85,7 +90,6 @@ export const createCrewRoutes = (
     try {
       const resource = await resourceService.provision({
         name: body.name ?? "",
-        type: body.type as ResourceType,
         minimumLevel: body.minimumLevel as MembershipLevel,
       });
       res.status(201).json(resource);
@@ -99,10 +103,33 @@ export const createCrewRoutes = (
     res.status(200).json(resources);
   });
 
+  router.patch("/resources/:id", async (req, res) => {
+    const body = req.body as UpdateResourceBody;
+
+    try {
+      const resource = await resourceService.updateResource(req.params.id, {
+        name: body.name,
+        minimumLevel: body.minimumLevel,
+      });
+      res.status(200).json(resource);
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
+
   router.delete("/resources/:id", async (req, res) => {
     try {
       await resourceService.decommission(req.params.id);
       res.status(200).json({ message: "Resource decommissioned" });
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
+
+  router.patch("/resources/:id/reactivate", async (req, res) => {
+    try {
+      await resourceService.reactivateResource(req.params.id);
+      res.status(200).json({ message: "Resource reactivated" });
     } catch (err) {
       sendError(res, err);
     }

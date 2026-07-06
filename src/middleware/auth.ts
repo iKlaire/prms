@@ -62,6 +62,11 @@ export const createPassengerAuth = (
       return;
     }
 
+    if (!passenger.isActive) {
+      res.status(403).json({ error: "Account decommissioned" });
+      return;
+    }
+
     res.locals.passenger = passenger;
     next();
   };

@@ -2,38 +2,47 @@ import { MembershipLevel } from "../domain/passenger";
 import {
   CreateResourceDTO,
   Resource,
-  ResourceType,
+  UpdateResourceDTO,
 } from "../domain/resource";
 import { LEVEL_ACCESS } from "./usageService";
 
 export interface ResourceStore {
   create(dto: CreateResourceDTO): Promise<Resource>;
   findAll(): Promise<Resource[]>;
+  findById(id: string): Promise<Resource | null>;
+  findByName(name: string): Promise<Resource | null>;
   findActiveByMinimumLevels(levels: MembershipLevel[]): Promise<Resource[]>;
+  update(id: string, dto: UpdateResourceDTO): Promise<Resource | null>;
   decommission(id: string): Promise<Resource | null>;
+  reactivate(id: string): Promise<Resource | null>;
 }
 
 export class ResourceService {
   constructor(private readonly resourceRepo: ResourceStore) {}
 
-  async provision(dto: CreateResourceDTO): Promise<Resource> {
-    if (!dto.name || !dto.type || !dto.minimumLevel) {
-      throw new Error("name, type and minimumLevel are required");
-    }
-
-    if (!this.isResourceType(dto.type)) {
-      throw new Error("Invalid type");
+  async provisionResource(dto: CreateResourceDTO): Promise<Resource> {
+    if (!dto.name || !dto.minimumLevel) {
+      throw new Error("name and minimumLevel are required");
     }
 
     if (!this.isMembershipLevel(dto.minimumLevel)) {
       throw new Error("Invalid minimumLevel");
     }
 
+    const name = dto.name.trim();
+    const existing = await this.resourceRepo.findByName(name);
+    if (existing) {
+      throw new Error("Resource with this name already exists");
+    }
+
     return this.resourceRepo.create({
-      name: dto.name.trim(),
-      type: dto.type,
+      name,
       minimumLevel: dto.minimumLevel,
     });
+  }
+
+  async provision(dto: CreateResourceDTO): Promise<Resource> {
+    return this.provisionResource(dto);
   }
 
   async findAll(): Promise<Resource[]> {
@@ -52,8 +61,73 @@ export class ResourceService {
     );
   }
 
-  async decommission(id: string): Promise<Resource> {
+  async updateResource(
+    id: string,
+    dto: UpdateResourceDTO,
+  ): Promise<Resource> {
+    if (!dto.name && !dto.minimumLevel) {
+      throw new Error("At least one field required");
+    }
+
+    if (
+      dto.minimumLevel &&
+      !this.isMembershipLevel(dto.minimumLevel)
+    ) {
+      throw new Error("Invalid minimumLevel");
+    }
+
+    const name = dto.name?.trim();
+    if (name) {
+      const existing = await this.resourceRepo.findByName(name);
+      if (existing && existing.id !== id) {
+        throw new Error("Resource with this name already exists");
+      }
+    }
+
+    const resource = await this.resourceRepo.update(id, {
+      name,
+      minimumLevel: dto.minimumLevel,
+    });
+    if (!resource) {
+      throw new Error("Resource not found");
+    }
+
+    return resource;
+  }
+
+  async decommissionResource(id: string): Promise<Resource> {
+    const current = await this.resourceRepo.findById(id);
+    if (!current) {
+      throw new Error("Resource not found");
+    }
+
+    if (!current.isActive) {
+      throw new Error("Resource is already decommissioned");
+    }
+
     const resource = await this.resourceRepo.decommission(id);
+    if (!resource) {
+      throw new Error("Resource not found");
+    }
+
+    return resource;
+  }
+
+  async decommission(id: string): Promise<Resource> {
+    return this.decommissionResource(id);
+  }
+
+  async reactivateResource(id: string): Promise<Resource> {
+    const current = await this.resourceRepo.findById(id);
+    if (!current) {
+      throw new Error("Resource not found");
+    }
+
+    if (current.isActive) {
+      throw new Error("Resource is already active");
+    }
+
+    const resource = await this.resourceRepo.reactivate(id);
     if (!resource) {
       throw new Error("Resource not found");
     }
@@ -63,9 +137,5 @@ export class ResourceService {
 
   private isMembershipLevel(value: string): value is MembershipLevel {
     return Object.values(MembershipLevel).includes(value as MembershipLevel);
-  }
-
-  private isResourceType(value: string): value is ResourceType {
-    return Object.values(ResourceType).includes(value as ResourceType);
   }
 }

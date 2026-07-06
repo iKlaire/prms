@@ -3,3 +3,7 @@ export interface CrewLead {
   name: string;
   createdAt: Date;
 }
+
+export interface CrewLeadWithPassword extends CrewLead {
+  password: string;
+}
