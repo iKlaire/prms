@@ -1,21 +1,31 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import type { Resource, UsageLog } from "../types";
+import type { Resource, ToastState, UsageLog } from "../types";
 
 type Tab = "resources" | "history";
 
-export default function PassengerDashboard() {
+interface PassengerDashboardProps {
+  onToast: (toast: ToastState) => void;
+}
+
+export default function PassengerDashboard({ onToast }: PassengerDashboardProps) {
   const navigate = useNavigate();
   const auth = JSON.parse(sessionStorage.getItem("auth") || "{}");
   const [tab, setTab] = useState<Tab>("resources");
   const [resources, setResources] = useState<Resource[]>([]);
   const [history, setHistory] = useState<UsageLog[]>([]);
-  const [feedback, setFeedback] = useState<{ id: string; msg: string; ok: boolean } | null>(null);
 
   const logout = () => {
     sessionStorage.clear();
     navigate("/");
+  };
+
+  const showError = (err: unknown) => {
+    onToast({
+      message: err instanceof Error ? err.message : "Something went wrong",
+      type: "error",
+    });
   };
 
   const fetchResources = async () => {
@@ -29,21 +39,16 @@ export default function PassengerDashboard() {
   };
 
   useEffect(() => {
-    if (tab === "resources") fetchResources();
-    if (tab === "history") fetchHistory();
+    if (tab === "resources") void fetchResources().catch(showError);
+    if (tab === "history") void fetchHistory().catch(showError);
   }, [tab]);
 
   const useResource = async (id: string, name: string) => {
     try {
       await api.post(`/passengers/resources/${id}/use`);
-      setFeedback({ id, msg: `${name} accessed successfully`, ok: true });
-      setTimeout(() => setFeedback(null), 3000);
+      onToast({ message: `${name} accessed successfully`, type: "success" });
     } catch (e: unknown) {
-      if (e && typeof e === "object" && "response" in e) {
-        const axiosErr = e as { response?: { data?: { error?: string } } };
-        setFeedback({ id, msg: axiosErr.response?.data?.error || "Failed", ok: false });
-        setTimeout(() => setFeedback(null), 3000);
-      }
+      showError(e);
     }
   };
 
@@ -70,13 +75,6 @@ export default function PassengerDashboard() {
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* Feedback toast */}
-        {feedback && (
-          <div className={`mb-4 rounded-lg px-4 py-2 text-sm border ${feedback.ok ? "bg-green-900/30 border-green-700 text-green-400" : "bg-red-900/30 border-red-700 text-red-400"}`}>
-            {feedback.msg}
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-800">
           {(["resources", "history"] as Tab[]).map((t) => (
@@ -102,7 +100,6 @@ export default function PassengerDashboard() {
                 <div>
                   <p className="text-sm font-medium">{r.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-500">{r.type}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${levelColor[r.minimumLevel]}`}>
                       {r.minimumLevel}
                     </span>

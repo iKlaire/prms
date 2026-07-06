@@ -4,20 +4,11 @@ export enum MembershipLevel {
   PLATINUM = "PLATINUM",
 }
 
-export enum ResourceType {
-  FOOD_STATION = "FOOD_STATION",
-  SLEEPING_POD = "SLEEPING_POD",
-  BASIC_HYGIENE = "BASIC_HYGIENE",
-  PRIVATE_CABIN = "PRIVATE_CABIN",
-  ADVANCED_MEDICAL_BAY = "ADVANCED_MEDICAL_BAY",
-  LUXURY_O2_POD = "LUXURY_O2_POD",
-  VIP_REC_DECK = "VIP_REC_DECK",
-}
-
 export interface Passenger {
   id: string;
   name: string;
   membershipLevel: MembershipLevel;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,7 +16,6 @@ export interface Passenger {
 export interface Resource {
   id: string;
   name: string;
-  type: ResourceType;
   minimumLevel: MembershipLevel;
   isActive: boolean;
   createdAt: string;
@@ -59,4 +49,9 @@ export interface AuthState {
   role: UserRole;
   id: string;
   name: string;
+}
+
+export interface ToastState {
+  message: string;
+  type: "success" | "error";
 }

@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Toast from "./components/Toast";
 import Login from "./pages/Login";
 import CrewDashboard from "./pages/CrewDashboard";
 import PassengerDashboard from "./pages/PassengerDashboard";
-import type { AuthState } from "./types";
+import type { AuthState, ToastState } from "./types";
 
 function getAuth(): AuthState | null {
   const raw = sessionStorage.getItem("auth");
@@ -23,15 +25,18 @@ function ProtectedRoute({
 }
 
 export default function App() {
+  const [toast, setToast] = useState<ToastState | null>(null);
+
   return (
     <BrowserRouter>
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route
           path="/crew"
           element={
             <ProtectedRoute role="crew">
-              <CrewDashboard />
+              <CrewDashboard onToast={setToast} />
             </ProtectedRoute>
           }
         />
@@ -39,7 +44,7 @@ export default function App() {
           path="/passenger"
           element={
             <ProtectedRoute role="passenger">
-              <PassengerDashboard />
+              <PassengerDashboard onToast={setToast} />
             </ProtectedRoute>
           }
         />

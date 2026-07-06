@@ -26,12 +26,7 @@ export default function Login() {
       sessionStorage.setItem("auth", JSON.stringify({ role, id, name }));
       navigate(role === "crew" ? "/crew" : "/passenger");
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "response" in err) {
-        const axiosErr = err as { response?: { data?: { error?: string } } };
-        setError(axiosErr.response?.data?.error || "Login failed");
-      } else {
-        setError("Login failed");
-      }
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }

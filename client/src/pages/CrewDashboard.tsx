@@ -7,12 +7,17 @@ import type {
   UsageLog,
   AggregatedUsage,
   ResourceUsageCount,
+  ToastState,
 } from "../types";
-import { MembershipLevel, ResourceType } from "../types";
+import { MembershipLevel } from "../types";
 
 type Tab = "passengers" | "resources" | "reports";
 
-export default function CrewDashboard() {
+interface CrewDashboardProps {
+  onToast: (toast: ToastState) => void;
+}
+
+export default function CrewDashboard({ onToast }: CrewDashboardProps) {
   const navigate = useNavigate();
   const auth = JSON.parse(sessionStorage.getItem("auth") || "{}");
   const [tab, setTab] = useState<Tab>("passengers");
@@ -20,12 +25,12 @@ export default function CrewDashboard() {
   // Passengers state
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newLevel, setNewLevel] = useState<MembershipLevel>(MembershipLevel.SILVER);
 
   // Resources state
   const [resources, setResources] = useState<Resource[]>([]);
   const [resName, setResName] = useState("");
-  const [resType, setResType] = useState<ResourceType>(ResourceType.FOOD_STATION);
   const [resLevel, setResLevel] = useState<MembershipLevel>(MembershipLevel.SILVER);
 
   // Reports state
@@ -33,11 +38,16 @@ export default function CrewDashboard() {
   const [byLevel, setByLevel] = useState<AggregatedUsage[]>([]);
   const [topResources, setTopResources] = useState<ResourceUsageCount[]>([]);
 
-  const [error, setError] = useState("");
-
   const logout = () => {
     sessionStorage.clear();
     navigate("/");
+  };
+
+  const showError = (err: unknown) => {
+    onToast({
+      message: err instanceof Error ? err.message : "Something went wrong",
+      type: "error",
+    });
   };
 
   // Fetch passengers
@@ -65,46 +75,88 @@ export default function CrewDashboard() {
   };
 
   useEffect(() => {
-    if (tab === "passengers") fetchPassengers();
-    if (tab === "resources") fetchResources();
-    if (tab === "reports") fetchReports();
+    if (tab === "passengers") void fetchPassengers().catch(showError);
+    if (tab === "resources") void fetchResources().catch(showError);
+    if (tab === "reports") void fetchReports().catch(showError);
   }, [tab]);
 
   const createPassenger = async () => {
-    if (!newName) return;
+    if (!newName || !newPassword) return;
     try {
-      await api.post("/crew/passengers", { name: newName, membershipLevel: newLevel });
+      await api.post("/crew/passengers", {
+        name: newName,
+        password: newPassword,
+        membershipLevel: newLevel,
+      });
       setNewName("");
-      fetchPassengers();
+      setNewPassword("");
+      await fetchPassengers();
+      onToast({ message: "Passenger created", type: "success" });
     } catch (e: unknown) {
-      setError("Failed to create passenger");
+      showError(e);
     }
   };
 
-  const deletePassenger = async (id: string) => {
-    await api.delete(`/crew/passengers/${id}`);
-    fetchPassengers();
+  const decommissionPassenger = async (id: string) => {
+    try {
+      await api.delete(`/crew/passengers/${id}`);
+      await fetchPassengers();
+      onToast({ message: "Passenger decommissioned", type: "success" });
+    } catch (e: unknown) {
+      showError(e);
+    }
   };
 
   const updateMembership = async (id: string, level: MembershipLevel) => {
-    await api.patch(`/crew/passengers/${id}`, { membershipLevel: level });
-    fetchPassengers();
+    try {
+      await api.patch(`/crew/passengers/${id}`, { membershipLevel: level });
+      await fetchPassengers();
+      onToast({ message: "Passenger updated", type: "success" });
+    } catch (e: unknown) {
+      showError(e);
+    }
   };
 
   const provisionResource = async () => {
     if (!resName) return;
     try {
-      await api.post("/crew/resources", { name: resName, type: resType, minimumLevel: resLevel });
+      await api.post("/crew/resources", { name: resName, minimumLevel: resLevel });
       setResName("");
-      fetchResources();
+      await fetchResources();
+      onToast({ message: "Resource provisioned", type: "success" });
     } catch (e: unknown) {
-      setError("Failed to provision resource");
+      showError(e);
     }
   };
 
   const decommissionResource = async (id: string) => {
-    await api.delete(`/crew/resources/${id}`);
-    fetchResources();
+    try {
+      await api.delete(`/crew/resources/${id}`);
+      await fetchResources();
+      onToast({ message: "Resource decommissioned", type: "success" });
+    } catch (e: unknown) {
+      showError(e);
+    }
+  };
+
+  const reactivateResource = async (id: string) => {
+    try {
+      await api.patch(`/crew/resources/${id}/reactivate`);
+      await fetchResources();
+      onToast({ message: "Resource reactivated", type: "success" });
+    } catch (e: unknown) {
+      showError(e);
+    }
+  };
+
+  const updateResourceLevel = async (id: string, level: MembershipLevel) => {
+    try {
+      await api.patch(`/crew/resources/${id}`, { minimumLevel: level });
+      await fetchResources();
+      onToast({ message: "Resource updated", type: "success" });
+    } catch (e: unknown) {
+      showError(e);
+    }
   };
 
   const tabs: Tab[] = ["passengers", "resources", "reports"];
@@ -126,12 +178,6 @@ export default function CrewDashboard() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {error && (
-          <div className="mb-4 bg-red-900/30 border border-red-700 text-red-400 rounded-lg px-4 py-2 text-sm">
-            {error}
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-800">
           {tabs.map((t) => (
@@ -164,6 +210,16 @@ export default function CrewDashboard() {
                 />
               </div>
               <div>
+                <label className="text-xs text-gray-500 mb-1 block">Password</label>
+                <input
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Initial password"
+                  type="password"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
                 <label className="text-xs text-gray-500 mb-1 block">Level</label>
                 <select
                   value={newLevel}
@@ -192,21 +248,28 @@ export default function CrewDashboard() {
                     <p className="text-xs text-gray-500 mt-0.5">{p.id}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <select
-                      value={p.membershipLevel}
-                      onChange={(e) => updateMembership(p.id, e.target.value as MembershipLevel)}
-                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
-                    >
-                      {Object.values(MembershipLevel).map((l) => (
-                        <option key={l}>{l}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => deletePassenger(p.id)}
-                      className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                    >
-                      Remove
-                    </button>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${p.isActive ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                      {p.isActive ? "Active" : "Decommissioned"}
+                    </span>
+                    {p.isActive && (
+                      <>
+                        <select
+                          value={p.membershipLevel}
+                          onChange={(e) => updateMembership(p.id, e.target.value as MembershipLevel)}
+                          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
+                        >
+                          {Object.values(MembershipLevel).map((l) => (
+                            <option key={l}>{l}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => decommissionPassenger(p.id)}
+                          className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        >
+                          Decommission
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -229,18 +292,6 @@ export default function CrewDashboard() {
                   placeholder="Resource name"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Type</label>
-                <select
-                  value={resType}
-                  onChange={(e) => setResType(e.target.value as ResourceType)}
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-                >
-                  {Object.values(ResourceType).map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Min Level</label>
@@ -267,18 +318,34 @@ export default function CrewDashboard() {
                 <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{r.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{r.type} · Min: {r.minimumLevel}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Min: {r.minimumLevel}</p>
                   </div>
                   <div className="flex items-center gap-3">
+                    <select
+                      value={r.minimumLevel}
+                      onChange={(e) => updateResourceLevel(r.id, e.target.value as MembershipLevel)}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
+                    >
+                      {Object.values(MembershipLevel).map((l) => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${r.isActive ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
                       {r.isActive ? "Active" : "Decommissioned"}
                     </span>
-                    {r.isActive && (
+                    {r.isActive ? (
                       <button
                         onClick={() => decommissionResource(r.id)}
                         className="text-xs text-red-500 hover:text-red-400 transition-colors"
                       >
                         Decommission
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => reactivateResource(r.id)}
+                        className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors"
+                      >
+                        Reactivate
                       </button>
                     )}
                   </div>
