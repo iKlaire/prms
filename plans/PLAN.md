@@ -43,7 +43,7 @@ npm test                    # run all tests
 ```sql
 crew_leads   (id UUID PK, name VARCHAR, created_at TIMESTAMPTZ)
 passengers   (id UUID PK, name VARCHAR, membership_level ENUM, created_at, updated_at)
-resources    (id UUID PK, name VARCHAR, type ENUM, minimum_level ENUM, is_active BOOL, created_at, updated_at)
+resources    (id UUID PK, name VARCHAR UNIQUE case-insensitive, minimum_level ENUM, is_active BOOL, created_at, updated_at)
 usage_logs   (id UUID PK, passenger_id UUID FK, resource_id UUID FK, accessed_at TIMESTAMPTZ)
 ```
 
@@ -51,13 +51,11 @@ usage_logs   (id UUID PK, passenger_id UUID FK, resource_id UUID FK, accessed_at
 
 ```sql
 membership_level: SILVER | GOLD | PLATINUM
-resource_type:    FOOD_STATION | SLEEPING_POD | BASIC_HYGIENE |
-                  PRIVATE_CABIN | ADVANCED_MEDICAL_BAY |
-                  LUXURY_O2_POD | VIP_REC_DECK
+resources are free-text names seeded from the spec examples
 ```
 
 ### Crew Leads
-Exactly 3, seeded at migration time. Fixed for the duration of the mission — spec states exactly 3, no requirement for dynamic crew lead management.
+Exactly 3, seeded at migration time: Ali, Muthu, Hock. Fixed for the duration of the mission — spec states exactly 3, no requirement for dynamic crew lead management.
 
 Enforcement strategy (application-layer, per spec's "system validation" language):
 - No POST/DELETE endpoints exposed for crew leads
@@ -86,7 +84,7 @@ This map lives in `src/services/usageService.ts`. Not in repository, not in rout
 
 ## Authentication
 
-Lightweight header-based identity — intentional choice for assessment scope. No JWT, no session. Keeps auth infrastructure out of the way so code quality and architecture are what gets evaluated.
+Lightweight login plus header-based identity — intentional choice for assessment scope. No JWT, no session. Passwords are stored as bcrypt hashes and login returns only the resolved ID.
 
 | Header | Used by | Validates against |
 |---|---|---|
@@ -131,7 +129,7 @@ Body: { name: string, password: string }
 #### Passengers
 ```
 POST   /crew/passengers
-Body:  { name: string, membershipLevel: "SILVER"|"GOLD"|"PLATINUM" }
+Body:  { name: string, password: string, membershipLevel: "SILVER"|"GOLD"|"PLATINUM" }
 → 201  { id, name, membershipLevel, createdAt, updatedAt }
 → 400  { error: "Name and membershipLevel are required" }
 
@@ -152,13 +150,26 @@ DELETE /crew/passengers/:id
 #### Resources
 ```
 POST   /crew/resources
-Body:  { name: string, type: ResourceType, minimumLevel: MembershipLevel }
-→ 201  { id, name, type, minimumLevel, isActive, createdAt, updatedAt }
-→ 400  { error: "name, type and minimumLevel are required" }
+Body:  { name: string, minimumLevel: MembershipLevel }
+→ 201  { id, name, minimumLevel, isActive, createdAt, updatedAt }
+→ 400  { error: "name and minimumLevel are required" }
+
+PATCH  /crew/resources/:id
+Body:  { name?: string, minimumLevel?: MembershipLevel }
+→ 200  { id, name, minimumLevel, isActive, createdAt, updatedAt }
+→ 400  { error: "At least one field required" }
+→ 404  { error: "Resource not found" }
+→ 409  { error: "Resource with this name already exists" }
 
 DELETE /crew/resources/:id
 → 200  { message: "Resource decommissioned" }
 → 404  { error: "Resource not found" }
+→ 409  { error: "Resource is already decommissioned" }
+
+PATCH  /crew/resources/:id/reactivate
+→ 200  { message: "Resource reactivated" }
+→ 404  { error: "Resource not found" }
+→ 409  { error: "Resource is already active" }
 ```
 
 #### Reports (Level 3)
@@ -292,7 +303,7 @@ prms/
 │   │   └── db.ts                     ✅ done — pg pool
 │   ├── domain/
 │   │   ├── passenger.ts              ✅ done — Passenger, MembershipLevel, DTOs
-│   │   ├── resource.ts               ✅ done — Resource, ResourceType, DTOs
+│   │   ├── resource.ts               ✅ done — Resource, free-text resource DTOs
 │   │   └── usageLog.ts               ✅ done — UsageLog, AggregatedUsage, etc.
 │   ├── repositories/
 │   │   ├── passengerRepository.ts    ✅ done
