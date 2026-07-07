@@ -42,11 +42,28 @@ npm run dev
 
 The client runs on `http://localhost:5173` and proxies `/api/*` to the backend.
 
+First crew login:
+
+```text
+Name: Ali
+Password: password123
+```
+
 Useful local commands:
 
 ```bash
 docker compose ps       # check Postgres container
 docker compose down     # stop local Postgres
+```
+
+If Docker commands fail, open Docker Desktop first and wait until it reports that the engine is running.
+
+Reset the local database:
+
+```bash
+docker compose down -v
+docker compose up -d
+npm run migrate
 ```
 
 ## Verification
