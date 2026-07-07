@@ -9,7 +9,12 @@ Passenger Resource Management System for the Everest Engineering take-home asses
 - Jest, ts-jest, Supertest
 - Optional React client in `client/`
 
-## Setup
+## Running Locally
+
+Prerequisites:
+
+- Node.js 20+
+- Docker Desktop running
 
 ```bash
 cp .env.example .env
@@ -19,17 +24,37 @@ npm run migrate
 npm run dev
 ```
 
+The backend runs on `http://localhost:3000`.
+
 API health check:
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-Run verification:
+Run the React client in a second terminal:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+The client runs on `http://localhost:5173` and proxies `/api/*` to the backend.
+
+Useful local commands:
+
+```bash
+docker compose ps       # check Postgres container
+docker compose down     # stop local Postgres
+```
+
+## Verification
 
 ```bash
 npm test
 npm run build
+cd client && npm run build
 ```
 
 ## Authentication
@@ -114,16 +139,6 @@ Resources use free-text names rather than a fixed type enum. The migration seeds
 - VIP Rec Deck
 
 Crew leads can add, rename, decommission, and reactivate resources without schema changes.
-
-## Client
-
-```bash
-cd client
-npm install
-npm run dev
-```
-
-The client runs on `http://localhost:5173` and proxies `/api/*` to the backend.
 
 ## AI Disclosure
 
