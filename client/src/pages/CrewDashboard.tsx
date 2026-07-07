@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import DashboardHeader from "../components/layout/DashboardHeader";
 import PassengersTab from "../features/crew/PassengersTab";
 import ReportsTab from "../features/crew/ReportsTab";
 import ResourcesTab from "../features/crew/ResourcesTab";
@@ -169,23 +170,7 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <div>
-          <span className="text-lg font-bold">X26 PRMS</span>
-          <span className="ml-3 text-sm text-indigo-400 font-medium">
-            Crew Lead
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">Cmdr. {auth.name}</span>
-          <button
-            onClick={logout}
-            className="text-sm text-gray-500 hover:text-white transition-colors"
-          >
-            Log out
-          </button>
-        </div>
-      </nav>
+      <DashboardHeader role="crew" userName={auth.name} onLogout={logout} />
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex gap-1 mb-6 border-b border-gray-800">

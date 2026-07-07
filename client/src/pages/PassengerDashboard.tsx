@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import DashboardHeader from "../components/layout/DashboardHeader";
+import Button from "../components/ui/Button";
 import type { Resource, ToastState, UsageLog } from "../types";
 
 type Tab = "resources" | "history";
@@ -60,19 +62,11 @@ export default function PassengerDashboard({ onToast }: PassengerDashboardProps)
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      {/* Nav */}
-      <nav className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <div>
-          <span className="text-lg font-bold">🚀 X26 PRMS</span>
-          <span className="ml-3 text-sm text-emerald-400 font-medium">Passenger</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">{auth.name}</span>
-          <button onClick={logout} className="text-sm text-gray-500 hover:text-white transition-colors">
-            Log out
-          </button>
-        </div>
-      </nav>
+      <DashboardHeader
+        role="passenger"
+        userName={auth.name}
+        onLogout={logout}
+      />
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Tabs */}
@@ -105,12 +99,13 @@ export default function PassengerDashboard({ onToast }: PassengerDashboardProps)
                     </span>
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={() => useResource(r.id, r.name)}
-                  className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  variant="success"
+                  size="xs"
                 >
                   Use
-                </button>
+                </Button>
               </div>
             ))}
             {resources.length === 0 && (
