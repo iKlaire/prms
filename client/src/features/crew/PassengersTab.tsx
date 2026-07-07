@@ -1,9 +1,9 @@
+import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
 import Field from "../../components/ui/Field";
 import PanelRow from "../../components/ui/PanelRow";
 import SelectField from "../../components/ui/SelectField";
 import StatusBadge from "../../components/ui/StatusBadge";
-import TextButton from "../../components/ui/TextButton";
 import { MembershipLevel } from "../../types";
 import type { PassengersTabProps } from "./types";
 
@@ -42,12 +42,7 @@ export default function PassengersTab({
           options={Object.values(MembershipLevel)}
           onChange={onLevelChange}
         />
-        <button
-          onClick={onCreatePassenger}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Add Passenger
-        </button>
+        <Button onClick={onCreatePassenger}>Add Passenger</Button>
       </div>
 
       <div className="space-y-2">
@@ -72,12 +67,13 @@ export default function PassengersTab({
                       )
                     }
                   />
-                  <TextButton
+                  <Button
                     onClick={() => onDecommissionPassenger(passenger.id)}
-                    tone="danger"
+                    variant="dangerText"
+                    size="xs"
                   >
                     Decommission
-                  </TextButton>
+                  </Button>
                 </>
               )}
             </div>

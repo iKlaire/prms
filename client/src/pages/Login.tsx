@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import Button from "../components/ui/Button";
 import type { UserRole } from "../types";
 
 export default function Login() {
@@ -83,13 +84,9 @@ export default function Login() {
             <p className="text-red-400 text-sm">{error}</p>
           )}
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
-          >
+          <Button onClick={handleLogin} disabled={loading} size="lg" fullWidth>
             {loading ? "Logging in..." : "Board Mission"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

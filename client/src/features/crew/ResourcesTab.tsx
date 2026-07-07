@@ -1,9 +1,9 @@
+import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
 import Field from "../../components/ui/Field";
 import PanelRow from "../../components/ui/PanelRow";
 import SelectField from "../../components/ui/SelectField";
 import StatusBadge from "../../components/ui/StatusBadge";
-import TextButton from "../../components/ui/TextButton";
 import { MembershipLevel } from "../../types";
 import type { ResourcesTabProps } from "./types";
 
@@ -34,12 +34,7 @@ export default function ResourcesTab({
           options={Object.values(MembershipLevel)}
           onChange={onLevelChange}
         />
-        <button
-          onClick={onProvisionResource}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Provision
-        </button>
+        <Button onClick={onProvisionResource}>Provision</Button>
       </div>
 
       <div className="space-y-2">
@@ -65,19 +60,21 @@ export default function ResourcesTab({
               />
               <StatusBadge active={resource.isActive} />
               {resource.isActive ? (
-                <TextButton
+                <Button
                   onClick={() => onDecommissionResource(resource.id)}
-                  tone="danger"
+                  variant="dangerText"
+                  size="xs"
                 >
                   Decommission
-                </TextButton>
+                </Button>
               ) : (
-                <TextButton
+                <Button
                   onClick={() => onReactivateResource(resource.id)}
-                  tone="success"
+                  variant="successText"
+                  size="xs"
                 >
                   Reactivate
-                </TextButton>
+                </Button>
               )}
             </div>
           </PanelRow>
