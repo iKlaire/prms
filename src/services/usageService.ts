@@ -6,6 +6,7 @@ import type {
   UsageLogWithDetails,
 } from "../domain/usageLog";
 import type { Resource } from "../domain/resource";
+import { ForbiddenError, GoneError, NotFoundError } from "../errors";
 
 export interface UsagePassengerStore {
   findById(id: string): Promise<{
@@ -51,21 +52,21 @@ export class UsageService {
   ): Promise<UsageLog> {
     const passenger = await this.passengerRepo.findById(passengerId);
     if (!passenger) {
-      throw new Error("Passenger not found");
+      throw new NotFoundError("Passenger not found");
     }
 
     const resource = await this.resourceRepo.findById(resourceId);
     if (!resource) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     if (!resource.isActive) {
-      throw new Error("Resource is decommissioned");
+      throw new GoneError("Resource is decommissioned");
     }
 
     const allowedLevels = LEVEL_ACCESS[passenger.membershipLevel];
     if (!allowedLevels.includes(resource.minimumLevel)) {
-      throw new Error("Access denied. Insufficient membership level");
+      throw new ForbiddenError("Access denied. Insufficient membership level");
     }
 
     return this.usageLogRepo.create(passenger.id, resource.id);

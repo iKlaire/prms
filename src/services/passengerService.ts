@@ -5,6 +5,12 @@ import {
   Passenger,
   UpdatePassengerDTO,
 } from "../domain/passenger";
+import {
+  ConflictError,
+  GoneError,
+  NotFoundError,
+  ValidationError,
+} from "../errors";
 
 export interface PassengerStore {
   create(dto: CreatePassengerDTO): Promise<Passenger>;
@@ -20,17 +26,25 @@ export class PassengerService {
 
   async create(dto: CreatePassengerDTO): Promise<Passenger> {
     if (!dto.name || !dto.password || !dto.membershipLevel) {
-      throw new Error("Name, password and membershipLevel are required");
+      throw new ValidationError(
+        "Name, password and membershipLevel are required",
+      );
     }
 
     if (!this.isMembershipLevel(dto.membershipLevel)) {
-      throw new Error("Invalid membershipLevel");
+      throw new ValidationError("Invalid membershipLevel");
     }
 
     const name = dto.name.trim();
+    if (!name) {
+      throw new ValidationError(
+        "Name, password and membershipLevel are required",
+      );
+    }
+
     const existing = await this.passengerRepo.findActiveByName(name);
     if (existing) {
-      throw new Error("Passenger with this name already exists");
+      throw new ConflictError("Passenger with this name already exists");
     }
 
     return this.passengerRepo.create({
@@ -55,7 +69,7 @@ export class PassengerService {
   async findById(id: string): Promise<Passenger> {
     const passenger = await this.passengerRepo.findById(id);
     if (!passenger) {
-      throw new Error("Passenger not found");
+      throw new NotFoundError("Passenger not found");
     }
 
     return passenger;
@@ -67,21 +81,21 @@ export class PassengerService {
 
   async update(id: string, dto: UpdatePassengerDTO): Promise<Passenger> {
     if (!dto.name && !dto.membershipLevel) {
-      throw new Error("At least one field required");
+      throw new ValidationError("At least one field required");
     }
 
     if (
       dto.membershipLevel &&
       !this.isMembershipLevel(dto.membershipLevel)
     ) {
-      throw new Error("Invalid membershipLevel");
+      throw new ValidationError("Invalid membershipLevel");
     }
 
     const name = dto.name?.trim();
     if (name) {
       const existing = await this.passengerRepo.findActiveByName(name);
       if (existing && existing.id !== id) {
-        throw new Error("Passenger with this name already exists");
+        throw new ConflictError("Passenger with this name already exists");
       }
     }
 
@@ -91,7 +105,7 @@ export class PassengerService {
     });
 
     if (!passenger) {
-      throw new Error("Passenger not found");
+      throw new NotFoundError("Passenger not found");
     }
 
     return passenger;
@@ -118,16 +132,16 @@ export class PassengerService {
   async decommissionPassenger(id: string): Promise<Passenger> {
     const current = await this.passengerRepo.findById(id);
     if (!current) {
-      throw new Error("Passenger not found");
+      throw new NotFoundError("Passenger not found");
     }
 
     if (!current.isActive) {
-      throw new Error("Passenger is already decommissioned");
+      throw new GoneError("Passenger is already decommissioned");
     }
 
     const passenger = await this.passengerRepo.decommission(id);
     if (!passenger) {
-      throw new Error("Passenger not found");
+      throw new NotFoundError("Passenger not found");
     }
 
     return passenger;

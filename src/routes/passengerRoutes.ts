@@ -1,6 +1,7 @@
 import type { RequestHandler, Response } from "express";
 import { Router } from "express";
 import type { Passenger } from "../domain/passenger";
+import { NotFoundError } from "../errors";
 import {
   AuthenticatedLocals,
   passengerAuth,
@@ -16,7 +17,7 @@ const getPassenger = (
   res: Response<unknown, AuthenticatedLocals>,
 ): Passenger => {
   if (!res.locals.passenger) {
-    throw new Error("Passenger not found");
+    throw new NotFoundError("Passenger not found");
   }
 
   return res.locals.passenger;

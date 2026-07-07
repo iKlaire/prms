@@ -9,27 +9,12 @@ import { PassengerService } from "../services/passengerService";
 import { ResourceService } from "../services/resourceService";
 import { UsageService } from "../services/usageService";
 import { sendError } from "./http";
-
-interface CreatePassengerBody {
-  name?: string;
-  password?: string;
-  membershipLevel?: MembershipLevel;
-}
-
-interface UpdatePassengerBody {
-  name?: string;
-  membershipLevel?: MembershipLevel;
-}
-
-interface CreateResourceBody {
-  name?: string;
-  minimumLevel?: MembershipLevel;
-}
-
-interface UpdateResourceBody {
-  name?: string;
-  minimumLevel?: MembershipLevel;
-}
+import {
+  validateCreatePassengerBody,
+  validateCreateResourceBody,
+  validateUpdatePassengerBody,
+  validateUpdateResourceBody,
+} from "./validation";
 
 export const createCrewRoutes = (
   passengerService: PassengerService,
@@ -42,14 +27,10 @@ export const createCrewRoutes = (
   router.use(authMiddleware);
 
   router.post("/passengers", async (req, res) => {
-    const body = req.body as CreatePassengerBody;
-
     try {
-      const passenger = await passengerService.create({
-        name: body.name ?? "",
-        password: body.password ?? "",
-        membershipLevel: body.membershipLevel as MembershipLevel,
-      });
+      const passenger = await passengerService.create(
+        validateCreatePassengerBody(req.body),
+      );
       res.status(201).json(passenger);
     } catch (err) {
       sendError(res, err);
@@ -62,13 +43,11 @@ export const createCrewRoutes = (
   });
 
   router.patch("/passengers/:id", async (req, res) => {
-    const body = req.body as UpdatePassengerBody;
-
     try {
-      const passenger = await passengerService.update(req.params.id, {
-        name: body.name,
-        membershipLevel: body.membershipLevel,
-      });
+      const passenger = await passengerService.update(
+        req.params.id,
+        validateUpdatePassengerBody(req.body),
+      );
       res.status(200).json(passenger);
     } catch (err) {
       sendError(res, err);
@@ -85,13 +64,10 @@ export const createCrewRoutes = (
   });
 
   router.post("/resources", async (req, res) => {
-    const body = req.body as CreateResourceBody;
-
     try {
-      const resource = await resourceService.provision({
-        name: body.name ?? "",
-        minimumLevel: body.minimumLevel as MembershipLevel,
-      });
+      const resource = await resourceService.provision(
+        validateCreateResourceBody(req.body),
+      );
       res.status(201).json(resource);
     } catch (err) {
       sendError(res, err);
@@ -104,13 +80,11 @@ export const createCrewRoutes = (
   });
 
   router.patch("/resources/:id", async (req, res) => {
-    const body = req.body as UpdateResourceBody;
-
     try {
-      const resource = await resourceService.updateResource(req.params.id, {
-        name: body.name,
-        minimumLevel: body.minimumLevel,
-      });
+      const resource = await resourceService.updateResource(
+        req.params.id,
+        validateUpdateResourceBody(req.body),
+      );
       res.status(200).json(resource);
     } catch (err) {
       sendError(res, err);

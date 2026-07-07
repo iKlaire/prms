@@ -376,6 +376,32 @@ describe("routes", () => {
     expect(response.body).toEqual({ error: "At least one field required" });
   });
 
+  it("rejects invalid crew route enum values before calling services", async () => {
+    const response = await request(app)
+      .post("/crew/passengers")
+      .send({
+        name: passenger.name,
+        password: "password123",
+        membershipLevel: "DIAMOND",
+      })
+      .expect(400);
+
+    expect(response.body).toEqual({ error: "Invalid membershipLevel" });
+    expect(passengerRepo.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-object request bodies", async () => {
+    const response = await request(app)
+      .post("/crew/resources")
+      .send([])
+      .expect(400);
+
+    expect(response.body).toEqual({
+      error: "Request body must be a JSON object",
+    });
+    expect(resourceRepo.create).not.toHaveBeenCalled();
+  });
+
   it("lists passenger-accessible resources", async () => {
     resourceRepo.findActiveByMinimumLevels.mockResolvedValue([resource]);
 

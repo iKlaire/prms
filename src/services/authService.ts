@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import type { CrewLead } from "../domain/crewLead";
 import type { Passenger } from "../domain/passenger";
+import { AuthenticationError } from "../errors";
 import { AuthTokenService } from "./authTokenService";
 
 export interface AuthCrewLeadStore {
@@ -32,14 +33,14 @@ export class AuthService {
     password: string,
   ): Promise<AuthResult<CrewLead>> {
     if (!name || !password) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError();
     }
 
     const crewLead = await this.crewLeadRepo.findByNameWithPassword(
       name.trim(),
     );
     if (!crewLead || !(await bcrypt.compare(password, crewLead.password))) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError();
     }
 
     const user = this.withoutPassword(crewLead);
@@ -54,14 +55,14 @@ export class AuthService {
     password: string,
   ): Promise<AuthResult<Passenger>> {
     if (!name || !password) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError();
     }
 
     const passenger = await this.passengerRepo.findByNameWithPassword(
       name.trim(),
     );
     if (!passenger || !(await bcrypt.compare(password, passenger.password))) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError();
     }
 
     const user = this.withoutPassword(passenger);

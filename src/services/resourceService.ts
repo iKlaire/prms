@@ -4,6 +4,12 @@ import {
   Resource,
   UpdateResourceDTO,
 } from "../domain/resource";
+import {
+  ConflictError,
+  GoneError,
+  NotFoundError,
+  ValidationError,
+} from "../errors";
 import { LEVEL_ACCESS } from "./usageService";
 
 export interface ResourceStore {
@@ -22,17 +28,21 @@ export class ResourceService {
 
   async provisionResource(dto: CreateResourceDTO): Promise<Resource> {
     if (!dto.name || !dto.minimumLevel) {
-      throw new Error("name and minimumLevel are required");
+      throw new ValidationError("name and minimumLevel are required");
     }
 
     if (!this.isMembershipLevel(dto.minimumLevel)) {
-      throw new Error("Invalid minimumLevel");
+      throw new ValidationError("Invalid minimumLevel");
     }
 
     const name = dto.name.trim();
+    if (!name) {
+      throw new ValidationError("name and minimumLevel are required");
+    }
+
     const existing = await this.resourceRepo.findByName(name);
     if (existing) {
-      throw new Error("Resource with this name already exists");
+      throw new ConflictError("Resource with this name already exists");
     }
 
     return this.resourceRepo.create({
@@ -53,7 +63,7 @@ export class ResourceService {
     membershipLevel: MembershipLevel,
   ): Promise<Resource[]> {
     if (!this.isMembershipLevel(membershipLevel)) {
-      throw new Error("Invalid membershipLevel");
+      throw new ValidationError("Invalid membershipLevel");
     }
 
     return this.resourceRepo.findActiveByMinimumLevels(
@@ -66,21 +76,21 @@ export class ResourceService {
     dto: UpdateResourceDTO,
   ): Promise<Resource> {
     if (!dto.name && !dto.minimumLevel) {
-      throw new Error("At least one field required");
+      throw new ValidationError("At least one field required");
     }
 
     if (
       dto.minimumLevel &&
       !this.isMembershipLevel(dto.minimumLevel)
     ) {
-      throw new Error("Invalid minimumLevel");
+      throw new ValidationError("Invalid minimumLevel");
     }
 
     const name = dto.name?.trim();
     if (name) {
       const existing = await this.resourceRepo.findByName(name);
       if (existing && existing.id !== id) {
-        throw new Error("Resource with this name already exists");
+        throw new ConflictError("Resource with this name already exists");
       }
     }
 
@@ -89,7 +99,7 @@ export class ResourceService {
       minimumLevel: dto.minimumLevel,
     });
     if (!resource) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     return resource;
@@ -98,16 +108,16 @@ export class ResourceService {
   async decommissionResource(id: string): Promise<Resource> {
     const current = await this.resourceRepo.findById(id);
     if (!current) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     if (!current.isActive) {
-      throw new Error("Resource is already decommissioned");
+      throw new GoneError("Resource is already decommissioned");
     }
 
     const resource = await this.resourceRepo.decommission(id);
     if (!resource) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     return resource;
@@ -120,16 +130,16 @@ export class ResourceService {
   async reactivateResource(id: string): Promise<Resource> {
     const current = await this.resourceRepo.findById(id);
     if (!current) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     if (current.isActive) {
-      throw new Error("Resource is already active");
+      throw new ConflictError("Resource is already active");
     }
 
     const resource = await this.resourceRepo.reactivate(id);
     if (!resource) {
-      throw new Error("Resource not found");
+      throw new NotFoundError("Resource not found");
     }
 
     return resource;
