@@ -74,6 +74,8 @@ npm run build
 cd client && npm run build
 ```
 
+GitHub Actions runs the same backend test/build and client build checks on pushes and pull requests to `main`.
+
 ## Authentication
 
 The backend uses JWT bearer authentication:
@@ -158,6 +160,16 @@ Resources use free-text names rather than a fixed type enum. The migration seeds
 - VIP Rec Deck
 
 Crew leads can add, rename, decommission, and reactivate resources without schema changes.
+
+## Production Considerations
+
+This implementation is production-oriented in structure, but a few pieces are intentionally scoped for the assessment:
+
+- JWTs are stored in `sessionStorage` for the demo client. A production web app should prefer secure, httpOnly cookies with CSRF protection where appropriate.
+- The migration script is simple and idempotent for local setup. Production should use a migration tool with migration history and rollback support.
+- Tests cover services and HTTP routes with mocked repositories. Production confidence would benefit from repository tests against a disposable PostgreSQL database.
+- Observability is minimal. Production should add structured request logging, request IDs, metrics, and error reporting.
+- `JWT_SECRET` must be changed from the `.env.example` placeholder and managed through deployment secrets.
 
 ## AI Disclosure
 
