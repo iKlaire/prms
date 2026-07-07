@@ -6,15 +6,17 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Inject auth header on every request based on stored session
+// Inject auth token on every request based on stored session
 api.interceptors.request.use((config) => {
   const raw = sessionStorage.getItem("auth");
   if (raw) {
-    const auth: AuthState = JSON.parse(raw);
-    if (auth.role === "crew") {
-      config.headers["x-crew-lead-id"] = auth.id;
-    } else {
-      config.headers["x-passenger-id"] = auth.id;
+    try {
+      const auth = JSON.parse(raw) as Partial<AuthState>;
+      if (auth.token) {
+        config.headers.Authorization = `Bearer ${auth.token}`;
+      }
+    } catch {
+      sessionStorage.removeItem("auth");
     }
   }
   return config;

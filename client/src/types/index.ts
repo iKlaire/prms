@@ -47,7 +47,7 @@ export type UserRole = "crew" | "passenger";
 
 export interface AuthState {
   role: UserRole;
-  id: string;
+  token: string;
   name: string;
 }
 

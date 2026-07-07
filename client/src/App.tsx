@@ -8,7 +8,18 @@ import type { AuthState, ToastState } from "./types";
 
 function getAuth(): AuthState | null {
   const raw = sessionStorage.getItem("auth");
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+
+  try {
+    const auth = JSON.parse(raw) as Partial<AuthState>;
+    if (!auth.role || !auth.token || !auth.name) {
+      return null;
+    }
+
+    return auth as AuthState;
+  } catch {
+    return null;
+  }
 }
 
 function ProtectedRoute({

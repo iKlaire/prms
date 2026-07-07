@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import type { CrewLead } from "../domain/crewLead";
 import type { Passenger } from "../domain/passenger";
+import { AuthTokenService } from "./authTokenService";
 
 export interface AuthCrewLeadStore {
   findByNameWithPassword(
@@ -14,13 +15,22 @@ export interface AuthPassengerStore {
   ): Promise<(Passenger & { password: string }) | null>;
 }
 
+export interface AuthResult<T> {
+  token: string;
+  user: T;
+}
+
 export class AuthService {
   constructor(
     private readonly crewLeadRepo: AuthCrewLeadStore,
     private readonly passengerRepo: AuthPassengerStore,
+    private readonly tokenService: AuthTokenService = new AuthTokenService(),
   ) {}
 
-  async loginCrewLead(name: string, password: string): Promise<CrewLead> {
+  async loginCrewLead(
+    name: string,
+    password: string,
+  ): Promise<AuthResult<CrewLead>> {
     if (!name || !password) {
       throw new Error("Invalid credentials");
     }
@@ -32,10 +42,17 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    return this.withoutPassword(crewLead);
+    const user = this.withoutPassword(crewLead);
+    return {
+      token: this.tokenService.sign({ sub: user.id, role: "crew" }),
+      user,
+    };
   }
 
-  async loginPassenger(name: string, password: string): Promise<Passenger> {
+  async loginPassenger(
+    name: string,
+    password: string,
+  ): Promise<AuthResult<Passenger>> {
     if (!name || !password) {
       throw new Error("Invalid credentials");
     }
@@ -47,7 +64,11 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    return this.withoutPassword(passenger);
+    const user = this.withoutPassword(passenger);
+    return {
+      token: this.tokenService.sign({ sub: user.id, role: "passenger" }),
+      user,
+    };
   }
 
   private withoutPassword<T extends { password: string }>(

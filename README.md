@@ -76,12 +76,14 @@ cd client && npm run build
 
 ## Authentication
 
-The backend uses lightweight header-based identity for assessment scope:
+The backend uses JWT bearer authentication:
 
-- Crew routes require `x-crew-lead-id`
-- Passenger routes require `x-passenger-id`
+- Login endpoints accept `{ "name": "...", "password": "..." }`.
+- Successful login returns a signed JWT plus the authenticated user.
+- Protected routes require `Authorization: Bearer <token>`.
+- Middleware verifies the token, checks the expected role, loads the user from PostgreSQL, and rejects decommissioned passengers.
 
-Login endpoints accept `{ "name": "...", "password": "..." }`. Passwords are stored as bcrypt hashes.
+Passwords are stored as bcrypt hashes. `JWT_SECRET` is configured in `.env`; `.env.example` includes a placeholder that should be changed for any deployed environment.
 
 Seeded crew leads:
 

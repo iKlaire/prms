@@ -12,13 +12,12 @@ import type { PassengerRepository } from "../src/repositories/passengerRepositor
 import { createAuthRoutes } from "../src/routes/authRoutes";
 import { createCrewRoutes } from "../src/routes/crewRoutes";
 import { createPassengerRoutes } from "../src/routes/passengerRoutes";
+import { AuthTokenService } from "../src/services/authTokenService";
 import type {
   AuthCrewLeadStore,
   AuthPassengerStore,
 } from "../src/services/authService";
-import {
-  AuthService,
-} from "../src/services/authService";
+import { AuthService } from "../src/services/authService";
 import {
   PassengerService,
   PassengerStore,
@@ -82,7 +81,7 @@ describe("app", () => {
       });
   });
 
-  it("protects crew routes when the crew header is missing", async () => {
+  it("protects crew routes when the bearer token is missing", async () => {
     const app = createApp();
 
     await request(app)
@@ -91,7 +90,7 @@ describe("app", () => {
       .expect({ error: "Forbidden" });
   });
 
-  it("protects passenger routes when the passenger header is missing", async () => {
+  it("protects passenger routes when the bearer token is missing", async () => {
     const app = createApp();
 
     await request(app)
@@ -104,6 +103,7 @@ describe("app", () => {
 describe("auth routes", () => {
   let crewLeadRepo: jest.Mocked<AuthCrewLeadStore>;
   let passengerRepo: jest.Mocked<AuthPassengerStore>;
+  let tokenService: AuthTokenService;
   let app: express.Express;
 
   beforeEach(() => {
@@ -113,16 +113,19 @@ describe("auth routes", () => {
     passengerRepo = {
       findByNameWithPassword: jest.fn(),
     };
+    tokenService = new AuthTokenService("test-secret");
 
     app = express();
     app.use(express.json());
     app.use(
       "/auth",
-      createAuthRoutes(new AuthService(crewLeadRepo, passengerRepo)),
+      createAuthRoutes(
+        new AuthService(crewLeadRepo, passengerRepo, tokenService),
+      ),
     );
   });
 
-  it("logs in a crew lead and returns only the ID", async () => {
+  it("logs in a crew lead and returns a token", async () => {
     crewLeadRepo.findByNameWithPassword.mockResolvedValue({
       ...crewLead,
       password: await bcrypt.hash("password123", 4),
@@ -133,7 +136,14 @@ describe("auth routes", () => {
       .send({ name: " Ali ", password: "password123" })
       .expect(200);
 
-    expect(response.body).toEqual({ crewLeadId: crewLead.id });
+    expect(response.body.crewLead).toMatchObject({
+      id: crewLead.id,
+      name: crewLead.name,
+    });
+    expect(tokenService.verify(response.body.token)).toEqual({
+      sub: crewLead.id,
+      role: "crew",
+    });
     expect(response.body).not.toHaveProperty("password");
     expect(crewLeadRepo.findByNameWithPassword).toHaveBeenCalledWith("Ali");
   });
@@ -148,7 +158,7 @@ describe("auth routes", () => {
       .expect({ error: "Invalid credentials" });
   });
 
-  it("logs in a passenger and returns only the ID", async () => {
+  it("logs in a passenger and returns a token", async () => {
     passengerRepo.findByNameWithPassword.mockResolvedValue({
       ...passenger,
       password: await bcrypt.hash("password123", 4),
@@ -159,27 +169,38 @@ describe("auth routes", () => {
       .send({ name: passenger.name, password: "password123" })
       .expect(200);
 
-    expect(response.body).toEqual({ passengerId: passenger.id });
+    expect(response.body.passenger).toMatchObject({
+      id: passenger.id,
+      name: passenger.name,
+    });
+    expect(tokenService.verify(response.body.token)).toEqual({
+      sub: passenger.id,
+      role: "passenger",
+    });
     expect(response.body).not.toHaveProperty("password");
   });
 });
 
 describe("auth middleware", () => {
   it("attaches a valid crew lead to protected routes", async () => {
+    const tokenService = new AuthTokenService("test-secret");
     const crewLeadRepo = {
       findById: jest.fn().mockResolvedValue(crewLead),
-    } as unknown as CrewLeadRepository;
+    } satisfies Pick<CrewLeadRepository, "findById">;
     const app = express();
 
     app.get(
       "/protected",
-      createCrewLeadOnly(crewLeadRepo),
+      createCrewLeadOnly(crewLeadRepo, tokenService),
       (_req, res) => res.status(200).json({ crewLead: res.locals.crewLead }),
     );
 
     const response = await request(app)
       .get("/protected")
-      .set("x-crew-lead-id", crewLead.id)
+      .set(
+        "Authorization",
+        `Bearer ${tokenService.sign({ sub: crewLead.id, role: "crew" })}`,
+      )
       .expect(200);
 
     expect(response.body.crewLead).toMatchObject({
@@ -188,43 +209,75 @@ describe("auth middleware", () => {
     });
   });
 
-  it("rejects unknown crew lead headers", async () => {
+  it("rejects tokens for unknown crew leads", async () => {
+    const tokenService = new AuthTokenService("test-secret");
     const crewLeadRepo = {
       findById: jest.fn().mockResolvedValue(null),
-    } as unknown as CrewLeadRepository;
+    } satisfies Pick<CrewLeadRepository, "findById">;
     const app = express();
 
     app.get(
       "/protected",
-      createCrewLeadOnly(crewLeadRepo),
+      createCrewLeadOnly(crewLeadRepo, tokenService),
       (_req, res) => res.status(200).json({ ok: true }),
     );
 
     await request(app)
       .get("/protected")
-      .set("x-crew-lead-id", "missing")
+      .set(
+        "Authorization",
+        `Bearer ${tokenService.sign({ sub: "missing", role: "crew" })}`,
+      )
       .expect(403)
       .expect({ error: "Forbidden" });
   });
 
+  it("rejects tokens for the wrong role", async () => {
+    const tokenService = new AuthTokenService("test-secret");
+    const crewLeadRepo = {
+      findById: jest.fn().mockResolvedValue(crewLead),
+    } satisfies Pick<CrewLeadRepository, "findById">;
+    const app = express();
+
+    app.get(
+      "/protected",
+      createCrewLeadOnly(crewLeadRepo, tokenService),
+      (_req, res) => res.status(200).json({ ok: true }),
+    );
+
+    await request(app)
+      .get("/protected")
+      .set(
+        "Authorization",
+        `Bearer ${tokenService.sign({ sub: passenger.id, role: "passenger" })}`,
+      )
+      .expect(403)
+      .expect({ error: "Forbidden" });
+    expect(crewLeadRepo.findById).not.toHaveBeenCalled();
+  });
+
   it("rejects decommissioned passenger accounts", async () => {
+    const tokenService = new AuthTokenService("test-secret");
     const passengerRepo = {
       findById: jest.fn().mockResolvedValue({
         ...passenger,
         isActive: false,
       }),
-    } as unknown as PassengerRepository;
+    } satisfies Pick<PassengerRepository, "findById">;
     const app = express();
 
     app.get(
       "/protected",
-      createPassengerAuth(passengerRepo),
+      createPassengerAuth(passengerRepo, tokenService),
       (_req, res) => res.status(200).json({ ok: true }),
     );
 
     await request(app)
       .get("/protected")
-      .set("x-passenger-id", passenger.id)
+      .set(
+        "Authorization",
+        `Bearer ${tokenService.sign({ sub: passenger.id, role: "passenger" })}`,
+      )
       .expect(403)
       .expect({ error: "Account decommissioned" });
   });

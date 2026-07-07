@@ -23,8 +23,11 @@ export default function Login() {
       const endpoint =
         role === "crew" ? "/auth/crew/login" : "/auth/passenger/login";
       const res = await api.post(endpoint, { name, password });
-      const id = role === "crew" ? res.data.crewLeadId : res.data.passengerId;
-      sessionStorage.setItem("auth", JSON.stringify({ role, id, name }));
+      const user = role === "crew" ? res.data.crewLead : res.data.passenger;
+      sessionStorage.setItem(
+        "auth",
+        JSON.stringify({ role, token: res.data.token, name: user.name }),
+      );
       navigate(role === "crew" ? "/crew" : "/passenger");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");

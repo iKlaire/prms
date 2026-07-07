@@ -15,8 +15,11 @@ export const createAuthRoutes = (authService: AuthService): Router => {
     const { name = "", password = "" } = req.body as LoginBody;
 
     try {
-      const crewLead = await authService.loginCrewLead(name, password);
-      res.status(200).json({ crewLeadId: crewLead.id });
+      const session = await authService.loginCrewLead(name, password);
+      res.status(200).json({
+        token: session.token,
+        crewLead: session.user,
+      });
     } catch {
       res.status(401).json({ error: "Invalid credentials" });
     }
@@ -26,8 +29,11 @@ export const createAuthRoutes = (authService: AuthService): Router => {
     const { name = "", password = "" } = req.body as LoginBody;
 
     try {
-      const passenger = await authService.loginPassenger(name, password);
-      res.status(200).json({ passengerId: passenger.id });
+      const session = await authService.loginPassenger(name, password);
+      res.status(200).json({
+        token: session.token,
+        passenger: session.user,
+      });
     } catch {
       res.status(401).json({ error: "Invalid credentials" });
     }
