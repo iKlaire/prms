@@ -3,6 +3,7 @@ interface SelectFieldProps<T extends string> {
   value: T;
   options: T[];
   size?: "sm" | "md";
+  disabled?: boolean;
   onChange: (value: T) => void;
 }
 
@@ -11,6 +12,7 @@ export default function SelectField<T extends string>({
   value,
   options,
   size = "md",
+  disabled = false,
   onChange,
 }: SelectFieldProps<T>) {
   const selectClass =
@@ -24,7 +26,8 @@ export default function SelectField<T extends string>({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className={selectClass}
+        disabled={disabled}
+        className={`${selectClass} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         {options.map((option) => (
           <option key={option}>{option}</option>

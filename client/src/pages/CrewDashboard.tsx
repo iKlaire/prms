@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import DashboardHeader from "../components/layout/DashboardHeader";
+import Tabs from "../components/ui/Tabs";
 import PassengersTab from "../features/crew/PassengersTab";
 import ReportsTab from "../features/crew/ReportsTab";
 import ResourcesTab from "../features/crew/ResourcesTab";
@@ -21,12 +22,20 @@ interface CrewDashboardProps {
   onToast: (toast: ToastState) => void;
 }
 
-const tabs: Tab[] = ["passengers", "resources", "reports"];
+const tabs: { value: Tab; label: string }[] = [
+  { value: "passengers", label: "passengers" },
+  { value: "resources", label: "resources" },
+  { value: "reports", label: "reports" },
+];
 
 export default function CrewDashboard({ onToast }: CrewDashboardProps) {
   const navigate = useNavigate();
   const auth = JSON.parse(sessionStorage.getItem("auth") || "{}");
   const [tab, setTab] = useState<Tab>("passengers");
+  const [isCreatingPassenger, setIsCreatingPassenger] = useState(false);
+  const [busyPassengerId, setBusyPassengerId] = useState<string | null>(null);
+  const [isProvisioningResource, setIsProvisioningResource] = useState(false);
+  const [busyResourceId, setBusyResourceId] = useState<string | null>(null);
 
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [newName, setNewName] = useState("");
@@ -85,11 +94,16 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
   }, [tab]);
 
   const createPassenger = async () => {
-    if (!newName || !newPassword) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName || !newPassword) {
+      onToast({ message: "Name and password required", type: "error" });
+      return;
+    }
 
+    setIsCreatingPassenger(true);
     try {
       await api.post("/crew/passengers", {
-        name: newName,
+        name: trimmedName,
         password: newPassword,
         membershipLevel: newLevel,
       });
@@ -99,35 +113,48 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
       onToast({ message: "Passenger created", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setIsCreatingPassenger(false);
     }
   };
 
   const decommissionPassenger = async (id: string) => {
+    setBusyPassengerId(id);
     try {
       await api.delete(`/crew/passengers/${id}`);
       await fetchPassengers();
       onToast({ message: "Passenger decommissioned", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setBusyPassengerId(null);
     }
   };
 
   const updateMembership = async (id: string, level: MembershipLevel) => {
+    setBusyPassengerId(id);
     try {
       await api.patch(`/crew/passengers/${id}`, { membershipLevel: level });
       await fetchPassengers();
       onToast({ message: "Passenger updated", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setBusyPassengerId(null);
     }
   };
 
   const provisionResource = async () => {
-    if (!resName) return;
+    const trimmedName = resName.trim();
+    if (!trimmedName) {
+      onToast({ message: "Resource name required", type: "error" });
+      return;
+    }
 
+    setIsProvisioningResource(true);
     try {
       await api.post("/crew/resources", {
-        name: resName,
+        name: trimmedName,
         minimumLevel: resLevel,
       });
       setResName("");
@@ -135,36 +162,47 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
       onToast({ message: "Resource provisioned", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setIsProvisioningResource(false);
     }
   };
 
   const decommissionResource = async (id: string) => {
+    setBusyResourceId(id);
     try {
       await api.delete(`/crew/resources/${id}`);
       await fetchResources();
       onToast({ message: "Resource decommissioned", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setBusyResourceId(null);
     }
   };
 
   const reactivateResource = async (id: string) => {
+    setBusyResourceId(id);
     try {
       await api.patch(`/crew/resources/${id}/reactivate`);
       await fetchResources();
       onToast({ message: "Resource reactivated", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setBusyResourceId(null);
     }
   };
 
   const updateResourceLevel = async (id: string, level: MembershipLevel) => {
+    setBusyResourceId(id);
     try {
       await api.patch(`/crew/resources/${id}`, { minimumLevel: level });
       await fetchResources();
       onToast({ message: "Resource updated", type: "success" });
     } catch (e: unknown) {
       showError(e);
+    } finally {
+      setBusyResourceId(null);
     }
   };
 
@@ -173,21 +211,7 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
       <DashboardHeader role="crew" userName={auth.name} onLogout={logout} />
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex gap-1 mb-6 border-b border-gray-800">
-          {tabs.map((item) => (
-            <button
-              key={item}
-              onClick={() => setTab(item)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                tab === item
-                  ? "border-indigo-500 text-white"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        <Tabs items={tabs} activeValue={tab} onChange={setTab} />
 
         {tab === "passengers" && (
           <PassengersTab
@@ -195,6 +219,8 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
             newName={newName}
             newPassword={newPassword}
             newLevel={newLevel}
+            isCreatingPassenger={isCreatingPassenger}
+            busyPassengerId={busyPassengerId}
             onNameChange={setNewName}
             onPasswordChange={setNewPassword}
             onLevelChange={setNewLevel}
@@ -209,6 +235,8 @@ export default function CrewDashboard({ onToast }: CrewDashboardProps) {
             resources={resources}
             resName={resName}
             resLevel={resLevel}
+            isProvisioningResource={isProvisioningResource}
+            busyResourceId={busyResourceId}
             onNameChange={setResName}
             onLevelChange={setResLevel}
             onProvisionResource={provisionResource}

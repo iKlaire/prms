@@ -12,6 +12,8 @@ export default function PassengersTab({
   newName,
   newPassword,
   newLevel,
+  isCreatingPassenger,
+  busyPassengerId,
   onNameChange,
   onPasswordChange,
   onLevelChange,
@@ -28,6 +30,7 @@ export default function PassengersTab({
           onChange={onNameChange}
           placeholder="Passenger name"
           className="flex-1"
+          disabled={isCreatingPassenger}
         />
         <Field
           label="Password"
@@ -35,14 +38,21 @@ export default function PassengersTab({
           onChange={onPasswordChange}
           placeholder="Initial password"
           type="password"
+          disabled={isCreatingPassenger}
         />
         <SelectField
           label="Level"
           value={newLevel}
           options={Object.values(MembershipLevel)}
           onChange={onLevelChange}
+          disabled={isCreatingPassenger}
         />
-        <Button onClick={onCreatePassenger}>Add Passenger</Button>
+        <Button
+          onClick={onCreatePassenger}
+          disabled={isCreatingPassenger || !newName.trim() || !newPassword}
+        >
+          {isCreatingPassenger ? "Adding..." : "Add Passenger"}
+        </Button>
       </div>
 
       <div className="space-y-2">
@@ -60,6 +70,7 @@ export default function PassengersTab({
                     value={passenger.membershipLevel}
                     options={Object.values(MembershipLevel)}
                     size="sm"
+                    disabled={busyPassengerId === passenger.id}
                     onChange={(level) =>
                       onUpdateMembership(
                         passenger.id,
@@ -71,6 +82,7 @@ export default function PassengersTab({
                     onClick={() => onDecommissionPassenger(passenger.id)}
                     variant="dangerText"
                     size="xs"
+                    disabled={busyPassengerId === passenger.id}
                   >
                     Decommission
                   </Button>

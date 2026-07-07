@@ -12,6 +12,8 @@ export interface PassengersTabProps {
   newName: string;
   newPassword: string;
   newLevel: MembershipLevel;
+  isCreatingPassenger: boolean;
+  busyPassengerId: string | null;
   onNameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onLevelChange: (value: MembershipLevel) => void;
@@ -24,6 +26,8 @@ export interface ResourcesTabProps {
   resources: Resource[];
   resName: string;
   resLevel: MembershipLevel;
+  isProvisioningResource: boolean;
+  busyResourceId: string | null;
   onNameChange: (value: string) => void;
   onLevelChange: (value: MembershipLevel) => void;
   onProvisionResource: () => void;

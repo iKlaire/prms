@@ -11,6 +11,8 @@ export default function ResourcesTab({
   resources,
   resName,
   resLevel,
+  isProvisioningResource,
+  busyResourceId,
   onNameChange,
   onLevelChange,
   onProvisionResource,
@@ -27,14 +29,21 @@ export default function ResourcesTab({
           onChange={onNameChange}
           placeholder="Resource name"
           className="flex-1 min-w-40"
+          disabled={isProvisioningResource}
         />
         <SelectField
           label="Min Level"
           value={resLevel}
           options={Object.values(MembershipLevel)}
           onChange={onLevelChange}
+          disabled={isProvisioningResource}
         />
-        <Button onClick={onProvisionResource}>Provision</Button>
+        <Button
+          onClick={onProvisionResource}
+          disabled={isProvisioningResource || !resName.trim()}
+        >
+          {isProvisioningResource ? "Provisioning..." : "Provision"}
+        </Button>
       </div>
 
       <div className="space-y-2">
@@ -51,6 +60,7 @@ export default function ResourcesTab({
                 value={resource.minimumLevel}
                 options={Object.values(MembershipLevel)}
                 size="sm"
+                disabled={busyResourceId === resource.id}
                 onChange={(level) =>
                   onUpdateResourceLevel(
                     resource.id,
@@ -64,6 +74,7 @@ export default function ResourcesTab({
                   onClick={() => onDecommissionResource(resource.id)}
                   variant="dangerText"
                   size="xs"
+                  disabled={busyResourceId === resource.id}
                 >
                   Decommission
                 </Button>
@@ -72,6 +83,7 @@ export default function ResourcesTab({
                   onClick={() => onReactivateResource(resource.id)}
                   variant="successText"
                   size="xs"
+                  disabled={busyResourceId === resource.id}
                 >
                   Reactivate
                 </Button>
