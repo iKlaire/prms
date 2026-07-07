@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Toast from "./components/Toast";
+import Toast from "./components/feedback/Toast";
 import Login from "./pages/Login";
 import CrewDashboard from "./pages/CrewDashboard";
 import PassengerDashboard from "./pages/PassengerDashboard";

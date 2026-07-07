@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { ToastState } from "../types";
+import type { ToastState } from "../../types";
 
 interface ToastProps {
   toast: ToastState | null;
